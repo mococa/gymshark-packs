@@ -1,0 +1,81 @@
+package templates
+
+import "fmt"
+
+templ Home(packSizes []int) {
+	@Base("Pack Calculator") {
+		<div class="container">
+			<section class="calculator-section">
+				<h2>Calculate Pack Breakdown</h2>
+				<form id="calculate-form">
+					<div class="form-group">
+						<label for="order">Order Quantity:</label>
+						<input
+							type="number"
+							id="order"
+							name="order"
+							placeholder="Enter number of items"
+							min="1"
+							required
+						/>
+					</div>
+					<button type="submit">Calculate</button>
+				</form>
+
+				<div id="result" class="result hidden">
+					<h3>Result</h3>
+					<div class="result-grid">
+						<div class="result-item">
+							<span class="label">Order:</span>
+							<span class="value" id="result-order">-</span>
+						</div>
+						<div class="result-item">
+							<span class="label">Total Items:</span>
+							<span class="value" id="result-total-items">-</span>
+						</div>
+						<div class="result-item">
+							<span class="label">Total Packs:</span>
+							<span class="value" id="result-total-packs">-</span>
+						</div>
+					</div>
+
+					<h4>Pack Breakdown</h4>
+					<div id="pack-breakdown" class="pack-breakdown"></div>
+				</div>
+
+				<div id="error" class="error hidden"></div>
+			</section>
+
+			<section class="pack-sizes-section">
+				<h2>Manage Pack Sizes</h2>
+				<form id="add-pack-form">
+					<div class="form-group">
+						<label for="new-size">Add Pack Size:</label>
+						<div class="input-button-group">
+							<input
+								type="number"
+								id="new-size"
+								name="size"
+								placeholder="e.g. 750"
+								min="1"
+							/>
+							<button type="submit">Add</button>
+						</div>
+					</div>
+				</form>
+
+				<div id="pack-error" class="error hidden"></div>
+
+				<h3>Current Pack Sizes</h3>
+				<div id="pack-sizes-list" class="size-list">
+					for _, size := range packSizes {
+						<div class="size-item" data-size={ fmt.Sprint(size) }>
+							<span class="size-value">{ fmt.Sprint(size) } items</span>
+							<button class="delete-btn" data-size={ fmt.Sprint(size) }>×</button>
+						</div>
+					}
+				</div>
+			</section>
+		</div>
+	}
+}
