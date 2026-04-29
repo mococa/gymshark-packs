@@ -1,0 +1,249 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for calculating optimal pack sizes for customer orders",
+        "title": "RE Partners Pack Calculator API",
+        "contact": {
+            "name": "Luiz Moureau",
+            "email": "luiz@moureau.dev"
+        },
+        "version": "1.0"
+    },
+    "host": "gymshark-challenge.moureau.dev",
+    "basePath": "/",
+    "paths": {
+        "/api/calculate": {
+            "post": {
+                "description": "Calculate the minimum number of packs needed to fulfill an order",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "packs"
+                ],
+                "summary": "Calculate optimal pack breakdown",
+                "parameters": [
+                    {
+                        "description": "Order quantity",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CalculateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CalculateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/pack-sizes": {
+            "get": {
+                "description": "Retrieve all configured pack sizes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-sizes"
+                ],
+                "summary": "Get all pack sizes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add a new pack size to the available options",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-sizes"
+                ],
+                "summary": "Add a new pack size",
+                "parameters": [
+                    {
+                        "description": "Pack size to add",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AddPackSizeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/pack-sizes/{size}": {
+            "delete": {
+                "description": "Remove a pack size from the available options",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-sizes"
+                ],
+                "summary": "Delete a pack size",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack size to delete",
+                        "name": "size",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/healthz": {
+            "get": {
+                "description": "Check if the API is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handler.AddPackSizeRequest": {
+            "type": "object",
+            "properties": {
+                "size": {
+                    "type": "integer",
+                    "example": 750
+                }
+            }
+        },
+        "handler.CalculateRequest": {
+            "type": "object",
+            "properties": {
+                "order": {
+                    "type": "integer",
+                    "example": 501
+                }
+            }
+        },
+        "handler.CalculateResponse": {
+            "type": "object",
+            "properties": {
+                "order": {
+                    "type": "integer",
+                    "example": 501
+                },
+                "packs": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    },
+                    "example": {
+                        "250": 1,
+                        "500": 1
+                    }
+                },
+                "total_items": {
+                    "type": "integer",
+                    "example": 750
+                },
+                "total_packs": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "handler.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invalid request"
+                }
+            }
+        }
+    }
+}
