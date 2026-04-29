@@ -1,26 +1,33 @@
 package templates
 
 templ Base(title string) {
-	<!DOCTYPE html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>{ title }</title>
-		<link rel="stylesheet" href="/static/css/style.css"/>
-	</head>
-	<body>
-		<header>
-			<h1>RE Partners Pack Calculator</h1>
-			<p class="subtitle">Calculate optimal pack sizes for customer orders</p>
-		</header>
-		<main>
-			{ children... }
-		</main>
-		<footer>
-			<p><a href="/docs/">API Docs</a></p>
-		</footer>
-		<script src="/static/js/app.js"></script>
-	</body>
-	</html>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>{ title }</title>
+	<link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body>
+	<header>
+		<h1>RE Partners Pack Calculator</h1>
+		<p class="subtitle">Calculate optimal pack sizes for customer orders</p>
+	</header>
+	<main>
+		{ children... }
+	</main>
+	<footer>
+		<p>
+			<a href="https://github.com/mococa/gymshark-packs" target="_blank">
+				Git Repository
+			</a> | <a href="/docs/">API Docs</a>
+		</p>
+	</footer>
+	<script src="/static/js/app.js"></script>
+</body>
+
+</html>
 }
