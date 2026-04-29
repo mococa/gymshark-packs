@@ -75,9 +75,11 @@ func main() {
 	r.Get("/healthz", apiHandler.Health)
 
 	// Swagger documentation
-	r.Get("/docs/*", httpSwagger.Handler(
+	docsHandler := http.StripPrefix("/docs", httpSwagger.Handler(
 		httpSwagger.URL("doc.json"),
 	))
+	r.Get("/docs/", docsHandler.ServeHTTP)
+	r.Get("/docs/*", docsHandler.ServeHTTP)
 
 	// API routes
 	apiLimiter := middleware.NewRateLimiter(10, 20) // 10 req/s, burst 20
