@@ -1,0 +1,97 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: gymshark-challenge
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    if: ${{ secrets.AWS_ROLE_ARN != '' && secrets.TF_STATE_BUCKET != '' && secrets.TF_STATE_LOCK_TABLE != '' && secrets.DOMAIN_NAME != '' }}
+    defaults:
+      run:
+        working-directory: ./terraform/environments/prod
+    outputs:
+      ecr_repository: ${{ steps.tf_output.outputs.ecr_repository }}
+      function_name: ${{ steps.tf_output.outputs.function_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.7.0'
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Plan
+        run: terraform plan -var="domain_name=${{ secrets.DOMAIN_NAME }}" -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply tfplan
+
+      - name: Get Terraform Outputs
+        id: tf_output
+        run: |
+          echo "ecr_repository=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
+          echo "function_name=$(terraform output -raw function_name)" >> $GITHUB_OUTPUT
+
+  deploy-app:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: deploy-infrastructure
+    if: ${{ needs.deploy-infrastructure.result == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build --target prod -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+
+      - name: Update Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ needs.deploy-infrastructure.outputs.function_name }} \
+            --image-uri ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
+            --region ${{ env.AWS_REGION }}
