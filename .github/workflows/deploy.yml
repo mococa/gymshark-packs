@@ -13,15 +13,12 @@ env:
   ECR_REPOSITORY: gymshark-challenge
 
 jobs:
-  deploy-infrastructure:
-    name: Deploy Infrastructure
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./terraform/environments/prod
-    outputs:
-      ecr_repository: ${{ steps.tf_output.outputs.ecr_repository }}
-      function_name: ${{ steps.tf_output.outputs.function_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -47,38 +44,17 @@ jobs:
             -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}" \
             -backend-config="encrypt=true"
 
-      - name: Terraform Plan
-        run: terraform plan -var="domain_name=${{ secrets.DOMAIN_NAME }}" -out=tfplan
-
-      - name: Terraform Apply
-        run: terraform apply tfplan
-
-      - name: Get Terraform Outputs
-        id: tf_output
-        run: |
-          echo "ecr_repository=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
-          echo "function_name=$(terraform output -raw function_name)" >> $GITHUB_OUTPUT
-
-  deploy-app:
-    name: Deploy Application
-    runs-on: ubuntu-latest
-    needs: deploy-infrastructure
-    if: needs.deploy-infrastructure.result == 'success'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+      - name: Create ECR repository
+        run: terraform apply -auto-approve -target=module.lambda.aws_ecr_repository.lambda
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registries: ${{ env.AWS_REGION }}
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build and push image to ECR
+        working-directory: .
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
@@ -88,9 +64,26 @@ jobs:
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
           docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
 
-      - name: Update Lambda function
+      - name: Deploy infrastructure
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          terraform plan \
+            -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+            -var="bootstrap_image_uri=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest" \
+            -out=tfplan
+          terraform apply tfplan
+
+      - name: Get Terraform outputs
+        id: tf_output
+        run: echo "function_name=$(terraform output -raw function_name)" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda to latest image
+        working-directory: .
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           aws lambda update-function-code \
-            --function-name ${{ needs.deploy-infrastructure.outputs.function_name }} \
-            --image-uri ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
+            --function-name ${{ steps.tf_output.outputs.function_name }} \
+            --image-uri $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
             --region ${{ env.AWS_REGION }}
