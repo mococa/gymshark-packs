@@ -5,6 +5,17 @@ locals {
   )
 
   subdomain = var.domain_name != "" ? split(".", var.domain_name)[0] : ""
+
+  dns_instructions = var.domain_name != "" ? join("\n", [
+    "Add CNAME record in your DNS provider:",
+    "",
+    "Type:   CNAME",
+    "Name:   ${local.subdomain}",
+    "Target: ${local.lambda_hostname}",
+    "TTL:    Auto or 300",
+    "",
+    "Note: If using a DNS proxy (e.g., Cloudflare), use DNS-only mode for compatibility.",
+  ]) : "No custom domain configured - using Lambda Function URL directly"
 }
 
 output "ecr_repository_url" {
@@ -24,15 +35,5 @@ output "function_name" {
 
 output "dns_setup_instructions" {
   description = "Instructions for custom domain DNS setup"
-  value = var.domain_name != "" ? <<EOT
-Add CNAME record in your DNS provider:
-
-Type:   CNAME
-Name:   ${local.subdomain}
-Target: ${local.lambda_hostname}
-TTL:    Auto or 300
-
-Note: If using a DNS proxy (e.g., Cloudflare), use DNS-only mode for compatibility.
-EOT
- : "No custom domain configured - using Lambda Function URL directly"
+  value       = local.dns_instructions
 }
