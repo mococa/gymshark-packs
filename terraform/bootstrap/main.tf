@@ -14,7 +14,8 @@ provider "aws" {
 
 # S3 bucket for Terraform state
 resource "aws_s3_bucket" "tfstate" {
-  bucket = var.state_bucket_name
+  bucket        = var.state_bucket_name
+  force_destroy = true
 
   tags = {
     Name        = "Terraform State Bucket"
@@ -73,6 +74,12 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "domain_name" {
+  description = "Custom domain for the app (e.g. gymshark-challenge.moureau.dev). If set, an ACM certificate is requested."
+  type        = string
+  default     = ""
+}
+
 variable "state_bucket_name" {
   description = "Name of the S3 bucket for Terraform state"
   type        = string
@@ -91,4 +98,34 @@ output "state_bucket" {
 
 output "lock_table" {
   value = aws_dynamodb_table.tfstate_lock.id
+}
+
+# ACM certificate for custom domain (only created when domain_name is set)
+resource "aws_acm_certificate" "app" {
+  count             = var.domain_name != "" ? 1 : 0
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Project   = "RE Partners Challenge"
+    ManagedBy = "Terraform"
+  }
+}
+
+output "certificate_arn" {
+  description = "ACM certificate ARN — add as GitHub secret ACM_CERTIFICATE_ARN once the certificate is ISSUED"
+  value       = var.domain_name != "" ? aws_acm_certificate.app[0].arn : "no domain configured"
+}
+
+output "certificate_validation_cname" {
+  description = "Add this CNAME record to your DNS provider to validate the certificate"
+  value = var.domain_name != "" ? {
+    name  = tolist(aws_acm_certificate.app[0].domain_validation_options)[0].resource_record_name
+    type  = tolist(aws_acm_certificate.app[0].domain_validation_options)[0].resource_record_type
+    value = tolist(aws_acm_certificate.app[0].domain_validation_options)[0].resource_record_value
+  } : null
 }

@@ -1,0 +1,79 @@
+name: Bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain_name:
+        description: 'Custom domain for the app (e.g. gymshark-challenge.moureau.dev). Leave empty to skip ACM certificate.'
+        required: false
+        default: ''
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  bootstrap:
+    name: Bootstrap Infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform/bootstrap
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.7.0'
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            $([ -n "${{ inputs.domain_name }}" ] && echo '-var="domain_name=${{ inputs.domain_name }}"' || true)
+
+      - name: Print outputs
+        run: |
+          STATE_BUCKET=$(terraform output -raw state_bucket)
+          LOCK_TABLE=$(terraform output -raw lock_table)
+          CERT_ARN=$(terraform output -raw certificate_arn 2>/dev/null || echo "")
+
+          echo "## Bootstrap complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Add these as GitHub repository secrets:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`TF_STATE_BUCKET\` | \`$STATE_BUCKET\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`TF_STATE_LOCK_TABLE\` | \`$LOCK_TABLE\` |" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ inputs.domain_name }}" ] && [ "$CERT_ARN" != "no domain configured" ]; then
+            CNAME_NAME=$(terraform output -json certificate_validation_cname | jq -r '.name')
+            CNAME_VALUE=$(terraform output -json certificate_validation_cname | jq -r '.value')
+
+            echo "| \`ACM_CERTIFICATE_ARN\` | \`$CERT_ARN\` |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Action required: DNS validation" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Add this CNAME to your DNS provider, then wait for the certificate to become ISSUED:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Type | CNAME |" >> $GITHUB_STEP_SUMMARY
+            echo "| Name | \`$CNAME_NAME\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Value | \`$CNAME_VALUE\` |" >> $GITHUB_STEP_SUMMARY
+          fi
