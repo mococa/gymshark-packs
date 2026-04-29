@@ -108,7 +108,6 @@ func (s *SQLiteStore) Remove(size int) error {
 	return tx.Commit()
 }
 
-// Close closes the underlying database connection.
 func (s *SQLiteStore) Close() error {
 	return s.db.Close()
 }

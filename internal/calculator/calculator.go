@@ -76,7 +76,6 @@ func (c *Calculator) CalculatePacks(order int, sizes []int) map[int]int {
 	return result
 }
 
-// TotalItems returns the total number of items across all packs.
 func TotalItems(packs map[int]int) int {
 	total := 0
 	for size, count := range packs {
@@ -85,7 +84,6 @@ func TotalItems(packs map[int]int) int {
 	return total
 }
 
-// TotalPacks returns the total number of packs.
 func TotalPacks(packs map[int]int) int {
 	total := 0
 	for _, count := range packs {

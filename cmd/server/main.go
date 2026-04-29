@@ -32,54 +32,45 @@ import (
 // @BasePath /
 
 func main() {
-	// Check for healthcheck flag
 	if len(os.Args) > 1 && os.Args[1] == "--healthcheck" {
 		performHealthcheck()
 		return
 	}
 
-	// Setup structured logging
-	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
-	})
-	logger := slog.New(logHandler)
+	}))
+
 	slog.SetDefault(logger)
 
-	// Initialize store based on driver
 	defaultSizes := []int{250, 500, 1000, 2000, 5000}
 	packStore := initializeStore(logger, defaultSizes)
 	if closer, ok := packStore.(io.Closer); ok {
 		defer closer.Close()
 	}
 
-	// Initialize handlers
 	calc := calculator.New()
 	apiHandler := handler.New(packStore, calc, logger)
 	webHandler := web.New(packStore, logger)
 
-	// Setup router
 	r := chi.NewRouter()
 
-	// Middleware
+	r.Get("/healthz", apiHandler.Health)
+
+	// middlewares
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(60 * time.Second))
 
-	// Static files
-	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(web.StaticFS())))
-
-	// Health check
-	r.Get("/healthz", apiHandler.Health)
-
-	// Swagger documentation
+	// docs
 	r.Get("/docs/doc.json", web.SwaggerSpec)
 	r.Get("/docs/", web.SwaggerIndex)
 	r.Get("/docs/index.html", web.SwaggerIndex)
 	r.Get("/docs/*", web.SwaggerAssets().ServeHTTP)
 
-	// API routes
+	// api routes
 	apiLimiter := middleware.NewRateLimiter(10, 20) // 10 req/s, burst 20
 	r.Route("/api", func(r chi.Router) {
 		r.Use(apiLimiter.Limit)
@@ -89,11 +80,11 @@ func main() {
 		r.Delete("/pack-sizes/{size}", apiHandler.DeletePackSize)
 	})
 
-	// Web UI routes
+	// static files and web
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(web.StaticFS())))
 	r.Get("/", webHandler.ServeHome)
 	r.NotFound(webHandler.ServeNotFound)
 
-	// Start server with graceful shutdown
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -107,46 +98,11 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Server run context
-	serverCtx, serverStopCtx := context.WithCancel(context.Background())
-
-	// Listen for syscall signals for graceful shutdown
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() {
-		<-sig
-
-		logger.Info("shutting down server")
-
-		shutdownCtx, cancel := context.WithTimeout(serverCtx, 30*time.Second)
-		defer cancel()
-
-		go func() {
-			<-shutdownCtx.Done()
-			if shutdownCtx.Err() == context.DeadlineExceeded {
-				logger.Error("graceful shutdown timed out, forcing exit")
-			}
-		}()
-
-		err := srv.Shutdown(shutdownCtx)
-		if err != nil {
-			logger.Error("server shutdown failed", "error", err)
-		}
-		serverStopCtx()
-	}()
-
-	logger.Info("starting server", "port", port)
-	err := srv.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		logger.Error("server failed to start", "error", err)
-		os.Exit(1)
-	}
-
-	<-serverCtx.Done()
-	logger.Info("server stopped")
+	serveWithGracefulShutdown(srv, port, logger)
 }
 
-// initializeStore creates the appropriate store based on STORE_DRIVER env var
+// reads the driver type to store pack sizes and initializes the appropriate store.
+// falls back to in-memory if any issues occur.
 func initializeStore(logger *slog.Logger, defaultSizes []int) store.PackSizeStore {
 	driver := os.Getenv("STORE_DRIVER")
 
@@ -224,4 +180,41 @@ func performHealthcheck() {
 	}
 
 	os.Exit(0)
+}
+
+// starts the HTTP server and listens for shutdown signals to gracefully terminate.
+func serveWithGracefulShutdown(srv *http.Server, port string, logger *slog.Logger) {
+	ctx, stop := context.WithCancel(context.Background())
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		<-sig
+
+		logger.Info("shutting down server")
+
+		shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		go func() {
+			<-shutdownCtx.Done()
+			if shutdownCtx.Err() == context.DeadlineExceeded {
+				logger.Error("graceful shutdown timed out, forcing exit")
+			}
+		}()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logger.Error("server shutdown failed", "error", err)
+		}
+		stop()
+	}()
+
+	logger.Info("starting server", "port", port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logger.Error("server failed to start", "error", err)
+		os.Exit(1)
+	}
+
+	<-ctx.Done()
+	logger.Info("server stopped")
 }

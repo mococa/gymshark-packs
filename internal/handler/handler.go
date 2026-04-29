@@ -30,12 +30,10 @@ func New(store store.PackSizeStore, calc *calculator.Calculator, logger *slog.Lo
 	return &Handler{store: store, calc: calc, logger: logger}
 }
 
-// CalculateRequest represents the request body for pack calculation
 type CalculateRequest struct {
 	Order int `json:"order" example:"501"`
 }
 
-// CalculateResponse represents the response for pack calculation
 type CalculateResponse struct {
 	Order      int         `json:"order" example:"501"`
 	TotalItems int         `json:"total_items" example:"750"`
@@ -43,12 +41,10 @@ type CalculateResponse struct {
 	Packs      map[int]int `json:"packs" example:"250:1,500:1"`
 }
 
-// AddPackSizeRequest represents the request to add a new pack size
 type AddPackSizeRequest struct {
 	Size int `json:"size" example:"750"`
 }
 
-// ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error" example:"invalid request"`
 }

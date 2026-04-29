@@ -214,7 +214,7 @@ gymshark-packs/
 ├── internal/
 │   ├── calculator/              # DP algorithm + comprehensive tests
 │   ├── handler/                 # REST API handlers with validation
-│   ├── store/                   # Thread-safe in-memory store
+│   ├── store/                   # Pluggable store: memory, SQLite, DynamoDB
 │   └── web/
 │       ├── templates/           # templ files (compile to Go)
 │       │   ├── base.templ
@@ -257,18 +257,17 @@ gymshark-packs/
 
 2. **Bootstrap Terraform state** (one-time):
    ```bash
-   cd terraform/bootstrap
-   terraform init && terraform apply
+   make bootstrap
    ```
 
-2. **Deploy Lambda function:**
+3. **Deploy Lambda function:**
    ```bash
    cd terraform/environments/prod
    terraform init
    terraform apply -var="domain_name=your-domain.example.com"
    ```
 
-3. **Configure custom domain** (optional):
+4. **Configure custom domain** (optional):
 
    After `terraform apply`, run `terraform output dns_setup_instructions` for complete setup.
 
@@ -280,7 +279,7 @@ gymshark-packs/
    TTL:    300
    ```
 
-4. **Deploy code:**
+5. **Deploy code:**
    - Push to `main` branch → GitHub Actions builds and deploys automatically
    - Or manually: build Docker image → push to ECR → Lambda updates automatically
 
@@ -338,7 +337,7 @@ The Makefile handles templ generation automatically for build commands.
 
 ## Security
 
-- ✅ Request validation (`DisallowUnknownFields`, 1MB max body, trailing JSON rejection)
+- ✅ Request validation (`DisallowUnknownFields`, 1KB max body, trailing JSON rejection)
 - ✅ Atomic business rule enforcement (last pack protection)
 - ✅ Minimal container image (AWS Lambda base + Web Adapter)
 - ✅ Structured JSON logging (compatible with CloudWatch)
@@ -349,9 +348,9 @@ The Makefile handles templ generation automatically for build commands.
 ## What I'd Add for Production
 
 - [x] **Persistence** - DynamoDB for Lambda, SQLite for local (implemented)
+- [x] **Rate limiting** - per-IP token-bucket (10 req/s, burst 20) on `/api/*`
 - [ ] **Observability** - Prometheus metrics, distributed tracing
-- [ ] **Rate limiting** - per-IP throttling via API Gateway
-- [ ] **Caching** - Redis/ElastiCache for calculation results
+- [ ] **Distributed caching** - Redis/ElastiCache for multi-instance calc results
 - [ ] **API versioning** - `/v1/calculate` for breaking changes
 - [ ] **Multi-region** - DynamoDB global tables for high availability
 

@@ -22,7 +22,6 @@ func New(store store.PackSizeStore, logger *slog.Logger) *Handler {
 	return &Handler{store: store, logger: logger}
 }
 
-// ServeHome renders the main calculator page.
 func (h *Handler) ServeHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		h.ServeNotFound(w, r)
@@ -37,14 +36,12 @@ func (h *Handler) ServeHome(w http.ResponseWriter, r *http.Request) {
 	templates.Home(packSizes).Render(r.Context(), w)
 }
 
-// ServeNotFound renders the 404 page.
 func (h *Handler) ServeNotFound(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
 	templates.NotFound().Render(r.Context(), w)
 }
 
-// StaticFS returns the embedded static filesystem.
 func StaticFS() http.FileSystem {
 	subFS, err := fs.Sub(staticFS, "static")
 	if err != nil {
