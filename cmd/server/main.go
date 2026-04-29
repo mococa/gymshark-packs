@@ -14,8 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	httpSwagger "github.com/swaggo/http-swagger/v2"
-
 	_ "github.com/mococa/gymshark-packs/docs"
 	"github.com/mococa/gymshark-packs/internal/calculator"
 	"github.com/mococa/gymshark-packs/internal/handler"
@@ -32,6 +30,7 @@ import (
 // @contact.website https://moureau.dev
 // @host gymshark-challenge.moureau.dev
 // @BasePath /
+
 func main() {
 	// Check for healthcheck flag
 	if len(os.Args) > 1 && os.Args[1] == "--healthcheck" {
@@ -75,11 +74,10 @@ func main() {
 	r.Get("/healthz", apiHandler.Health)
 
 	// Swagger documentation
-	docsHandler := http.StripPrefix("/docs/", httpSwagger.Handler(
-		httpSwagger.URL("doc.json"),
-	))
-	r.Get("/docs/", docsHandler.ServeHTTP)
-	r.Get("/docs/*", docsHandler.ServeHTTP)
+	r.Get("/docs/doc.json", web.SwaggerSpec)
+	r.Get("/docs/", web.SwaggerIndex)
+	r.Get("/docs/index.html", web.SwaggerIndex)
+	r.Get("/docs/*", web.SwaggerAssets().ServeHTTP)
 
 	// API routes
 	apiLimiter := middleware.NewRateLimiter(10, 20) // 10 req/s, burst 20
