@@ -20,11 +20,13 @@ RUN templ generate && \
     swag init -g cmd/server/main.go -o docs && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
 
-# prod: AWS Lambda base with Web Adapter for production deployment
-FROM public.ecr.aws/lambda/provided:al2023 AS prod
-COPY --from=builder /app/server /var/runtime/bootstrap
+# prod: plain Alpine + Lambda Web Adapter extension for production deployment
+FROM alpine:3.20 AS prod
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /app/server /app/server
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=8080
+ENTRYPOINT ["/app/server"]
 
 # dev: plain Alpine image for local docker run / docker-compose (default)
 FROM alpine:3.20 AS dev
