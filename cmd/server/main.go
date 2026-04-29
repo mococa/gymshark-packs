@@ -55,8 +55,6 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Get("/healthz", apiHandler.Health)
-
 	// middlewares
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.RealIP)
@@ -84,6 +82,8 @@ func main() {
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(web.StaticFS())))
 	r.Get("/", webHandler.ServeHome)
 	r.NotFound(webHandler.ServeNotFound)
+
+	r.Get("/healthz", apiHandler.Health)
 
 	port := os.Getenv("PORT")
 	if port == "" {
