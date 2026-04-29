@@ -75,7 +75,7 @@ func main() {
 	r.Get("/healthz", apiHandler.Health)
 
 	// Swagger documentation
-	docsHandler := http.StripPrefix("/docs", httpSwagger.Handler(
+	docsHandler := http.StripPrefix("/docs/", httpSwagger.Handler(
 		httpSwagger.URL("doc.json"),
 	))
 	r.Get("/docs/", docsHandler.ServeHTTP)
