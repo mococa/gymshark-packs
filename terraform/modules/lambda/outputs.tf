@@ -4,7 +4,7 @@ output "ecr_repository_url" {
 }
 
 output "function_url" {
-  description = "Lambda Function URL - use this as CNAME target in DNS"
+  description = "Lambda Function URL (direct access)"
   value       = aws_lambda_function_url.api.function_url
 }
 

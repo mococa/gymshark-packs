@@ -11,10 +11,8 @@ locals {
     "",
     "Type:   CNAME",
     "Name:   ${local.subdomain}",
-    "Target: ${local.lambda_hostname}",
+    "Target: ${module.lambda.cloudfront_domain}",
     "TTL:    Auto or 300",
-    "",
-    "Note: If using a DNS proxy (e.g., Cloudflare), use DNS-only mode for compatibility.",
   ]) : "No custom domain configured - using Lambda Function URL directly"
 }
 
@@ -24,7 +22,7 @@ output "ecr_repository_url" {
 }
 
 output "function_url" {
-  description = "Lambda Function URL - add CNAME record pointing to this domain"
+  description = "Lambda Function URL (direct access, no custom domain)"
   value       = module.lambda.function_url
 }
 
