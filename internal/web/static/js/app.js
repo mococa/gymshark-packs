@@ -18,6 +18,10 @@ calculateForm?.addEventListener('submit', async (e) => {
         return;
     }
 
+    const btn = calculateForm.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Calculating…';
+
     try {
         const response = await fetch(`${API_BASE}/calculate`, {
             method: 'POST',
@@ -36,6 +40,9 @@ calculateForm?.addEventListener('submit', async (e) => {
     } catch (err) {
         showError(err.message);
         hideResult();
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Calculate';
     }
 });
 
@@ -48,6 +55,10 @@ addPackForm?.addEventListener('submit', async (e) => {
         showPackError('Please enter a valid pack size');
         return;
     }
+
+    const btn = addPackForm.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
 
     try {
         const response = await fetch(`${API_BASE}/pack-sizes`, {
@@ -66,13 +77,20 @@ addPackForm?.addEventListener('submit', async (e) => {
         hidePackError();
     } catch (err) {
         showPackError(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add';
     }
 });
 
 // Delete pack size
 packSizesList?.addEventListener('click', async (e) => {
     if (e.target.classList.contains('delete-btn')) {
-        const size = e.target.dataset.size;
+        const btn = e.target;
+        const size = btn.dataset.size;
+
+        btn.disabled = true;
+        btn.textContent = '…';
 
         try {
             const response = await fetch(`${API_BASE}/pack-sizes/${size}`, {
@@ -87,6 +105,8 @@ packSizesList?.addEventListener('click', async (e) => {
             await loadPackSizes();
             hidePackError();
         } catch (err) {
+            btn.disabled = false;
+            btn.textContent = '×';
             showPackError(err.message);
         }
     }

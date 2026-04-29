@@ -104,6 +104,11 @@ button:hover {
     background: #333;
 }
 
+button:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
 .input-button-group {
     display: flex;
     gap: 10px;
