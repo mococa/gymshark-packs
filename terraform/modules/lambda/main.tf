@@ -184,18 +184,13 @@ resource "aws_cloudfront_distribution" "api" {
     target_origin_id = "lambda-url"
     compress         = true
 
-    forwarded_values {
-      query_string = true
-      headers      = ["*"]
-      cookies {
-        forward = "all"
-      }
-    }
+    # CachingDisabled — no caching for dynamic content
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    # AllViewerExceptHostHeader — forwards all headers except Host so Lambda
+    # receives its own domain as Host and can route the request correctly
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
   }
 
   restrictions {
