@@ -22,10 +22,9 @@ RUN templ generate && \
 
 # prod: AWS Lambda base with Web Adapter for production deployment
 FROM public.ecr.aws/lambda/provided:al2023 AS prod
-COPY --from=builder /app/server /var/task/server
+COPY --from=builder /app/server /var/runtime/bootstrap
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=8080
-CMD ["/var/task/server"]
 
 # dev: plain Alpine image for local docker run / docker-compose (default)
 FROM alpine:3.20 AS dev
