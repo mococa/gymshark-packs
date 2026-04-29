@@ -153,3 +153,64 @@ resource "aws_lambda_function_url" "api" {
     max_age           = 86400
   }
 }
+
+locals {
+  lambda_url_domain  = trimsuffix(trimprefix(aws_lambda_function_url.api.function_url, "https://"), "/")
+  enable_cloudfront  = var.certificate_arn != "" && var.domain_name != ""
+}
+
+# CloudFront distribution — only created when cert ARN + domain are provided
+resource "aws_cloudfront_distribution" "api" {
+  count = local.enable_cloudfront ? 1 : 0
+
+  enabled = true
+  aliases = [var.domain_name]
+
+  origin {
+    domain_name = local.lambda_url_domain
+    origin_id   = "lambda-url"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "lambda-url"
+    compress         = true
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = var.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  tags = {
+    Project = var.project_name
+  }
+}

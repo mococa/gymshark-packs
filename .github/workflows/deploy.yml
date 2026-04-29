@@ -68,6 +68,7 @@ jobs:
         run: |
           terraform plan \
             -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+            -var="certificate_arn=${{ secrets.ACM_CERTIFICATE_ARN }}" \
             -var="bootstrap_image_uri=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest" \
             -out=tfplan
           terraform apply tfplan

@@ -22,4 +22,6 @@ module "lambda" {
   project_name        = var.project_name
   aws_region          = var.aws_region
   bootstrap_image_uri = var.bootstrap_image_uri
+  domain_name         = var.domain_name
+  certificate_arn     = var.certificate_arn
 }

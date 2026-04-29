@@ -37,3 +37,8 @@ output "dns_setup_instructions" {
   description = "Instructions for custom domain DNS setup"
   value       = local.dns_instructions
 }
+
+output "cloudfront_domain" {
+  description = "CloudFront domain to use as CNAME target (empty if CloudFront not enabled)"
+  value       = module.lambda.cloudfront_domain
+}

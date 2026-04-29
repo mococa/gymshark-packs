@@ -21,3 +21,9 @@ variable "bootstrap_image_uri" {
   type        = string
   default     = ""
 }
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for CloudFront custom domain (must be in us-east-1)"
+  type        = string
+  default     = ""
+}

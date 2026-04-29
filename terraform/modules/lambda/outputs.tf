@@ -12,3 +12,8 @@ output "function_name" {
   description = "Lambda function name"
   value       = aws_lambda_function.api.function_name
 }
+
+output "cloudfront_domain" {
+  description = "CloudFront distribution domain — use as CNAME target for your custom domain"
+  value       = local.enable_cloudfront ? aws_cloudfront_distribution.api[0].domain_name : ""
+}
