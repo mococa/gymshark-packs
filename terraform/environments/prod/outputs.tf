@@ -33,5 +33,6 @@ Target: ${local.lambda_hostname}
 TTL:    Auto or 300
 
 Note: If using a DNS proxy (e.g., Cloudflare), use DNS-only mode for compatibility.
-EOT : "No custom domain configured - using Lambda Function URL directly"
+EOT
+ : "No custom domain configured - using Lambda Function URL directly"
 }
