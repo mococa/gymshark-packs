@@ -75,9 +75,8 @@ func main() {
 	r.Get("/healthz", apiHandler.Health)
 
 	// Swagger documentation
-	r.Get("/docs", http.RedirectHandler("/docs/", http.StatusMovedPermanently).ServeHTTP)
 	r.Get("/docs/*", httpSwagger.Handler(
-		httpSwagger.URL("/docs/swagger.json"),
+		httpSwagger.URL("doc.json"),
 	))
 
 	// API routes
