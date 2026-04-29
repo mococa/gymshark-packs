@@ -19,6 +19,7 @@ provider "aws" {
 module "lambda" {
   source = "../../modules/lambda"
 
-  project_name = var.project_name
-  aws_region   = var.aws_region
+  project_name        = var.project_name
+  aws_region          = var.aws_region
+  bootstrap_image_uri = var.bootstrap_image_uri
 }

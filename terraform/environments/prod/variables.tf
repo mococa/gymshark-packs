@@ -15,3 +15,9 @@ variable "domain_name" {
   type        = string
   default     = ""
 }
+
+variable "bootstrap_image_uri" {
+  description = "Image URI for first Lambda deploy, before CI pushes the real image"
+  type        = string
+  default     = ""
+}
