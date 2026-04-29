@@ -1,10 +1,21 @@
 name: Bootstrap
 
+# One-time setup workflow. Run this before the first deploy.
+#
+# Prerequisites (run locally once before triggering this):
+#   bash scripts/setup-oidc.sh <github-username> <repo-name>
+#   → add the printed AWS_ROLE_ARN as a GitHub secret
+#
+# After this workflow completes:
+#   1. Copy the values from the job summary and add them as GitHub secrets
+#   2. If a domain was provided, add the CNAME record to your DNS provider
+#   3. Wait for the certificate to become ISSUED, then push to main to deploy
+
 on:
   workflow_dispatch:
     inputs:
       domain_name:
-        description: 'Custom domain for the app (e.g. gymshark-challenge.moureau.dev). Leave empty to skip ACM certificate.'
+        description: 'Custom domain (e.g. gymshark-challenge.moureau.dev). Leave empty to skip ACM certificate.'
         required: false
         default: ''
 
@@ -42,9 +53,14 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
+        env:
+          DOMAIN_NAME: ${{ inputs.domain_name }}
         run: |
-          terraform apply -auto-approve \
-            $([ -n "${{ inputs.domain_name }}" ] && echo '-var="domain_name=${{ inputs.domain_name }}"' || true)
+          if [ -n "$DOMAIN_NAME" ]; then
+            terraform apply -auto-approve -var="domain_name=$DOMAIN_NAME"
+          else
+            terraform apply -auto-approve
+          fi
 
       - name: Print outputs
         run: |
@@ -54,7 +70,7 @@ jobs:
 
           echo "## Bootstrap complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Add these as GitHub repository secrets:" >> $GITHUB_STEP_SUMMARY
+          echo "### Step 1 — Add these GitHub repository secrets" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Secret | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
@@ -67,13 +83,24 @@ jobs:
 
             echo "| \`ACM_CERTIFICATE_ARN\` | \`$CERT_ARN\` |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Action required: DNS validation" >> $GITHUB_STEP_SUMMARY
+            echo "### Step 2 — Validate the ACM certificate" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Add this CNAME to your DNS provider, then wait for the certificate to become ISSUED:" >> $GITHUB_STEP_SUMMARY
+            echo "Add this CNAME to your DNS provider (proxy **off**):" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
             echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Type | CNAME |" >> $GITHUB_STEP_SUMMARY
+            echo "| Type | \`CNAME\` |" >> $GITHUB_STEP_SUMMARY
             echo "| Name | \`$CNAME_NAME\` |" >> $GITHUB_STEP_SUMMARY
             echo "| Value | \`$CNAME_VALUE\` |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Wait for the certificate status to become **ISSUED**, then proceed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Step 3 — Deploy" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Push to \`main\` to trigger the deploy workflow." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Step 2 — Deploy" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Push to \`main\` to trigger the deploy workflow." >> $GITHUB_STEP_SUMMARY
           fi
