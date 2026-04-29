@@ -2,8 +2,23 @@ name: gymshark
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: dev
     ports:
       - "8080:8080"
     environment:
       - PORT=8080
+      - STORE_DRIVER=sqlite
+      - SQLITE_PATH=/data/packs.db
+    volumes:
+      - pack-data:/data
+    healthcheck:
+      test: ["CMD", "/app/server", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  pack-data:
