@@ -1,7 +1,7 @@
 # RE Partners Pack Calculator
 
 **Live Demo:** [gymshark-challenge.moureau.dev](https://gymshark-challenge.moureau.dev)
-**API Docs:** [/docs](https://gymshark-challenge.moureau.dev/docs)
+**API Docs:** [/docs](https://gymshark-challenge.moureau.dev/docs/)
 
 Pack calculator implementation for the RE Partners challenge.
 
